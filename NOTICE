@@ -1,0 +1,12 @@
+gujarati-phonetic-linux
+Copyright 2026 Vishnuraj
+
+This product is a Python port of the ChromeOS virtual keyboard engine and its
+Gujarati phonetic layout from google-input-tools
+(https://github.com/google/google-input-tools, commit
+fc9f11d80d957560f7accf85a5fc27dd23625f70), Copyright 2013 The ChromeOS IME
+Authors, licensed under the Apache License, Version 2.0. The original files
+are in third_party/google-input-tools/, unchanged.
+
+Changes from the original: the engine is rewritten in Python and connected to
+IBus; the consonant + "y" rules of the layout are fixed (see README.md).

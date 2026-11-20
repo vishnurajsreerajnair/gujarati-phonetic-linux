@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IBus component: installed to /usr/share/ibus/component/. -->
+<component>
+  <name>org.freedesktop.IBus.GujaratiPhonetic</name>
+  <description>Gujarati phonetic keyboard (Google ChromeOS rules)</description>
+  <exec>/usr/lib/gujarati-phonetic-linux/gujarati-phonetic-engine --ibus</exec>
+  <version>0.1.0</version>
+  <author>Vishnuraj &lt;vishnurajsreerajn@gmail.com&gt;</author>
+  <license>Apache-2.0</license>
+  <textdomain>gujarati-phonetic</textdomain>
+  <engines>
+    <engine>
+      <name>gujarati-phonetic</name>
+      <language>gu</language>
+      <license>Apache-2.0</license>
+      <author>Vishnuraj &lt;vishnurajsreerajn@gmail.com&gt;</author>
+      <layout>us</layout>
+      <longname>Gujarati Phonetic</longname>
+      <description>Type Gujarati by sound: kem Cho gives કેમ છો</description>
+      <rank>99</rank>
+      <symbol>ગુ</symbol>
+    </engine>
+  </engines>
+</component>

@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+"""Check the installed keyboard: gujarati-phonetic-check "kem Cho"."""
+
+from __future__ import annotations
+
+import sys
+
+sys.path.insert(0, "/usr/lib/gujarati-phonetic-linux")
+
+from gujarati_phonetic.tools.cmd.check import main  # noqa: E402
+
+main()

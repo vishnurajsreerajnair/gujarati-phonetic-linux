@@ -55,7 +55,8 @@ def type_through_ibus(engine_name: str, keys: str) -> str:
     context.set_engine(engine_name)
     _wait_for_signals()
     for key in keys:
-        keyval = IBus.KEY_space if key == " " else IBus.unicode_to_keyval(ord(key))
+        # PyGObject takes the character as a string.
+        keyval = IBus.KEY_space if key == " " else IBus.unicode_to_keyval(key)
         handled = context.process_key_event(keyval, 0, 0)
         _wait_for_signals()
         if not handled:

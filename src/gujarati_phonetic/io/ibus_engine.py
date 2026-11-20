@@ -51,10 +51,12 @@ class GujaratiPhoneticEngine(IBus.Engine):
         """
         handled = False
         if not state & IBus.ModifierType.RELEASE_MASK:
+            # PyGObject gives the character as a string ("" or "\x00" if none).
             code = IBus.keyval_to_unicode(keyval)
+            char = "" if code == "\x00" else code
             is_space = keyval == IBus.KEY_space
             action = classify_key(
-                chr(code) if code else "",
+                char,
                 is_space,
                 keyval == IBus.KEY_BackSpace,
                 bool(state & IBus.ModifierType.CONTROL_MASK),
@@ -69,7 +71,7 @@ class GujaratiPhoneticEngine(IBus.Engine):
                 case _ if not self.gujarati:
                     handled = False
                 case KeyAction.TYPE:
-                    key = " " if is_space else chr(code)
+                    key = " " if is_space else char
                     handled = self._show(self.composer.type_key(key))
                 case KeyAction.BACKSPACE:
                     handled = self._show(self.composer.type_key(BACKSPACE))

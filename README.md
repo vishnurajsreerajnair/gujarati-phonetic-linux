@@ -15,7 +15,7 @@ show the same text as Google's code, key by key, on 41,792 typed sequences.
 In the Linux Terminal:
 
 ```sh
-curl --location https://github.com/<github-user>/gujarati-phonetic-linux/archive/refs/heads/main.tar.gz | tar xz
+curl --location https://github.com/vishnurajsreerajnair/gujarati-phonetic-linux/archive/refs/heads/main.tar.gz | tar xz
 cd gujarati-phonetic-linux-main
 sh packaging/install.sh
 ```

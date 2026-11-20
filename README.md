@@ -34,7 +34,8 @@ It prints `કેમ છો`.
 - Installs IBus with its Python bindings.
 - Copies the keyboard to `/usr/lib/gujarati-phonetic-linux`.
 - Makes IBus the input method of the Linux apps (`~/.config/environment.d/ibus.conf`). This replaces fcitx5 if it was set up.
-- Starts IBus with this keyboard when Linux starts (`~/.sommelierrc`).
+- Starts IBus with this keyboard when Linux starts, as the systemd user service `gujarati-phonetic-ibus`.
+- Gives the daemon one fixed address (`IBUS_ADDRESS`), for the apps and the Terminal (`~/.bashrc`). ChromeOS runs several displays, and by default IBus looks for a separate daemon on each one.
 
 To remove it, run `sh packaging/uninstall.sh`.
 

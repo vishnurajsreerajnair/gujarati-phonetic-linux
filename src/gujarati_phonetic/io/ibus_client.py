@@ -51,8 +51,11 @@ def type_through_ibus(engine_name: str, keys: str) -> str:
 
     context.connect("commit-text", on_commit)
     context.connect("update-preedit-text", on_composition)
+    # The global engine, as the start-up script sets it: setting the engine of
+    # one input context does not take effect on every IBus version.
+    if not bus.set_global_engine(engine_name):
+        raise LookupError(f"IBus engine {engine_name} cannot be started")
     context.focus_in()
-    context.set_engine(engine_name)
     _wait_for_signals()
     for key in keys:
         # PyGObject takes the character as a string.

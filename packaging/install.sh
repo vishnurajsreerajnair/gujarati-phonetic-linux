@@ -9,7 +9,8 @@ prefix=/usr/lib/gujarati-phonetic-linux
 # One IBus daemon at a fixed address for every app and display. By default
 # IBus finds its daemon by display name, and ChromeOS runs several displays
 # (X :0, X :1, Wayland), so apps would look for different daemons.
-address="unix:path=/run/user/$(id -u)/ibus-gujarati-phonetic"
+socket="/run/user/$(id -u)/ibus-gujarati-phonetic"
+address="unix:path=$socket"
 marker="# gujarati-phonetic-linux"
 
 # IBus, its Python bindings and setxkbmap (IBus sets the key layout with it).
@@ -52,8 +53,11 @@ Description=IBus with the Gujarati phonetic keyboard
 
 [Service]
 Environment=IBUS_ADDRESS=$address
+# A socket left by a stopped daemon blocks the address: remove it first.
+ExecStartPre=/bin/rm -f $socket
 ExecStart=/usr/bin/ibus-daemon --replace --panel=disable --address=$address
-ExecStartPost=/bin/sh -c "sleep 3; /usr/bin/ibus engine gujarati-phonetic"
+# Select the keyboard; "-" keeps the daemon running if this step fails.
+ExecStartPost=-/bin/sh -c "sleep 3; /usr/bin/ibus engine gujarati-phonetic"
 Restart=on-failure
 
 [Install]

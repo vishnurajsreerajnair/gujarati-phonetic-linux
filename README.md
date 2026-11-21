@@ -59,6 +59,9 @@ when ONLYOFFICE handles input methods. The X display is `:0`
 
 ## Install
 
+A guide for users, in Gujarati: [docs/guide-gu.md](docs/guide-gu.md) (the installer
+puts it as a PDF in Linux files).
+
 In the Linux Terminal:
 
 ```sh

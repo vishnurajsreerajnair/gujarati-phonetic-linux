@@ -14,4 +14,5 @@
 - Shift, Ctrl, Alt or Caps Lock pressed alone no longer ends the word: `vidyArthI` gives વિદ્યાર્થી.
 - Fast typing in LibreOffice keeps the order of the letters (IBus sync mode).
 - The shelf app shows the language in a small window where Linux has no notification service.
+- A guide in Gujarati with pictures (`docs/guide-gu.md`); the installer puts it as a PDF in Linux files.
 - `--engine` option of `gujarati-phonetic-engine` and `gujarati-phonetic-check`: the IBus engine name.

@@ -37,6 +37,9 @@ sudo install -m 644 "$here/packaging/gujarati-phonetic-toggle.desktop" \
 sudo install -D -m 644 "$here/packaging/gujarati-phonetic.svg" \
     /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
 
+# The guide in Gujarati, in the home folder ("Linux files" in the Files app).
+cp "$here/docs/guide-gu.pdf" "$HOME/ગુજરાતી કીબોર્ડ - માર્ગદર્શિકા.pdf"
+
 # Linux apps talk to IBus at the fixed address (and no longer to fcitx5).
 # Sync mode: a GTK app (LibreOffice) waits for IBus at each key, so that the
 # keys of fast typing reach the document in order.

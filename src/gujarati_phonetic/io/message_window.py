@@ -22,7 +22,7 @@ def show_message(summary: str, body: str, milliseconds: int) -> None:
     Args:
         summary: The title, in large letters.
         body: The text under the title.
-        milliseconds: How long the window stays.
+        milliseconds: How long the window stays on screen.
 
     Raises:
         ConnectionError: If there is no display to show the window on.
@@ -45,7 +45,14 @@ def show_message(summary: str, body: str, milliseconds: int) -> None:
     box.pack_start(title, False, False, 0)
     box.pack_start(text, False, False, 0)
     window.add(box)
+
+    def start_clock(shown: Gtk.Window, event: Gdk.EventAny) -> bool:
+        # The time counts from the moment the window is on screen: on a slow
+        # Chromebook it appears a second or more after it is made.
+        GLib.timeout_add(milliseconds, Gtk.main_quit)
+        return False
+
+    window.connect("map-event", start_clock)
     window.show_all()
-    GLib.timeout_add(milliseconds, Gtk.main_quit)
     Gtk.main()
     window.destroy()

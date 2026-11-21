@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> None:
         try:
             from gujarati_phonetic.io import message_window
 
-            message_window.show_message(summary, body, 1500)
+            message_window.show_message(summary, body, 2000)
         except (ConnectionError, ImportError, ValueError) as error:
             print(f"Error: {error}", file=sys.stderr)
             sys.exit(1)

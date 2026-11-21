@@ -13,6 +13,7 @@ sudo rm -f /usr/share/applications/gujarati-phonetic-toggle.desktop
 sudo rm -f /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
 sudo rm -f /usr/share/ibus/component/gujarati-phonetic.xml
 rm -f "$HOME/.config/environment.d/ibus.conf"
+rm -f "$HOME/ગુજરાતી કીબોર્ડ - માર્ગદર્શિકા.pdf"
 if [ -f "$HOME/.bashrc" ]; then
     sed -i '/# gujarati-phonetic-linux/d' "$HOME/.bashrc"
 fi

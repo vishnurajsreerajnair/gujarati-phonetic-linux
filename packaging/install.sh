@@ -24,8 +24,17 @@ sudo mkdir -p "$prefix"
 sudo cp -r "$here/src/gujarati_phonetic" "$prefix/"
 sudo install -m 755 "$here/packaging/gujarati-phonetic-engine" "$prefix/"
 sudo install -m 755 "$here/packaging/gujarati-phonetic-check" "$prefix/"
+sudo install -m 755 "$here/packaging/gujarati-phonetic-toggle" "$prefix/"
 sudo ln -sf "$prefix/gujarati-phonetic-check" /usr/local/bin/gujarati-phonetic-check
+sudo ln -sf "$prefix/gujarati-phonetic-toggle" /usr/local/bin/gujarati-phonetic-toggle
 sudo install -m 644 "$here/packaging/gujarati-phonetic.xml" /usr/share/ibus/component/
+
+# The shelf toggle: an app that switches between Gujarati and English and shows
+# the language in a notification. Pin it to the shelf from the launcher.
+sudo install -m 644 "$here/packaging/gujarati-phonetic-toggle.desktop" \
+    /usr/share/applications/
+sudo install -D -m 644 "$here/packaging/gujarati-phonetic.svg" \
+    /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
 
 # Linux apps talk to IBus at the fixed address (and no longer to fcitx5).
 mkdir -p "$HOME/.config/environment.d"
@@ -70,4 +79,5 @@ systemctl --user enable gujarati-phonetic-ibus.service
 gsettings set org.freedesktop.ibus.general preload-engines "['gujarati-phonetic']" 2>/dev/null || true
 
 echo "Installed. Restart Linux (right-click the Terminal icon, Shut down Linux),"
-echo "then open LibreOffice and type: kem Cho"
+echo "then open LibreOffice and type: kem Cho. Pin the app 'ગુજરાતી / English'"
+echo "to the shelf: it switches between Gujarati and English."

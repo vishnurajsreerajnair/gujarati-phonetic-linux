@@ -4,9 +4,25 @@ from __future__ import annotations
 
 import pytest
 
-from gujarati_phonetic.core.screen import keysym_for, screen_edit
+from gujarati_phonetic.core.screen import keysym_for, needs_key_presses, screen_edit
 from gujarati_phonetic.models.composer import Composer
 from gujarati_phonetic.models.parsed_layout import ParsedLayout
+
+
+@pytest.mark.parametrize(
+    ("client", "expected"),
+    [
+        ("gtk3-im:DesktopEditors", True),
+        ("gtk4-im:DesktopEditors", True),
+        ("gtk3-im:soffice", False),
+        ("QIBusInputContext", False),
+        ("fake", False),
+        ("", False),
+    ],
+)
+def test_needs_key_presses(client: str, expected: bool) -> None:
+    """Only ONLYOFFICE's documents get key presses."""
+    assert needs_key_presses(client) == expected
 
 
 @pytest.mark.parametrize(

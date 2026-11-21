@@ -1,6 +1,6 @@
 [project]
 name = "gujarati-phonetic-linux"
-version = "0.1.0"
+version = "0.1.0.dev1"
 description = "Gujarati phonetic keyboard for Linux apps: Google's ChromeOS rules on IBus"
 readme = "README.md"
 license = "Apache-2.0"
@@ -14,6 +14,7 @@ dev = ["pytest", "mypy", "ruff", "black", "python-xlib", "types-python-xlib"]
 [project.scripts]
 gujarati-phonetic-engine = "gujarati_phonetic.tools.cmd.engine:main"
 gujarati-phonetic-check = "gujarati_phonetic.tools.cmd.check:main"
+gujarati-phonetic-toggle = "gujarati_phonetic.tools.cmd.toggle:main"
 
 [build-system]
 requires = ["setuptools>=69"]

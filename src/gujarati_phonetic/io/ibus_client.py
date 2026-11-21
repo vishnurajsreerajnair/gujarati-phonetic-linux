@@ -1,4 +1,4 @@
-"""Type through ibus-daemon as an application would, to check the installation."""
+"""Talk to the running keyboard through ibus-daemon, as an application would."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import time
 import gi
 
 gi.require_version("IBus", "1.0")
-from gi.repository import GLib, IBus
+from gi.repository import Gio, GLib, IBus
 
 
 def type_through_ibus(engine_name: str, keys: str) -> str:
@@ -64,6 +64,41 @@ def type_through_ibus(engine_name: str, keys: str) -> str:
     text = f"{''.join(received)}{composition}"
     context.destroy()
     return text
+
+
+def toggle_language() -> str:
+    """Switch the running keyboard between Gujarati and English.
+
+    Returns:
+        The language now on: "gujarati" or "english".
+
+    Raises:
+        ConnectionError: If ibus-daemon or the keyboard is not running.
+    """
+    IBus.init()
+    bus = IBus.Bus()
+    if not bus.is_connected():
+        raise ConnectionError("cannot connect to ibus-daemon; is it running?")
+    connection = bus.get_connection()
+    # The Toggle method of the engine process (ibus_engine.run).
+    try:
+        reply = connection.call_sync(
+            "org.freedesktop.IBus.GujaratiPhonetic",
+            "/org/freedesktop/IBus/GujaratiPhonetic",
+            "org.freedesktop.IBus.GujaratiPhonetic.Language",
+            "Toggle",
+            None,
+            GLib.VariantType.new("(s)"),
+            Gio.DBusCallFlags.NONE,
+            2000,
+            None,
+        )
+    except GLib.Error as error:
+        raise ConnectionError(
+            f"the Gujarati keyboard is not running: {error.message}"
+        ) from error
+    (language,) = reply.unpack()
+    return str(language)
 
 
 def _wait_for_signals(seconds: float) -> None:

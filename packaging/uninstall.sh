@@ -8,6 +8,9 @@ rm -f "$HOME/.config/systemd/user/gujarati-phonetic-ibus.service"
 systemctl --user daemon-reload
 sudo rm -rf /usr/lib/gujarati-phonetic-linux
 sudo rm -f /usr/local/bin/gujarati-phonetic-check
+sudo rm -f /usr/local/bin/gujarati-phonetic-toggle
+sudo rm -f /usr/share/applications/gujarati-phonetic-toggle.desktop
+sudo rm -f /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
 sudo rm -f /usr/share/ibus/component/gujarati-phonetic.xml
 rm -f "$HOME/.config/environment.d/ibus.conf"
 if [ -f "$HOME/.bashrc" ]; then

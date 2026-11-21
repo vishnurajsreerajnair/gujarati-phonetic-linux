@@ -13,8 +13,10 @@ socket="/run/user/$(id -u)/ibus-gujarati-phonetic"
 address="unix:path=$socket"
 marker="# gujarati-phonetic-linux"
 
-# IBus, its Python bindings and setxkbmap (IBus sets the key layout with it).
-sudo apt-get install -y ibus ibus-gtk3 python3-gi gir1.2-ibus-1.0 x11-xkb-utils
+# IBus, its Python bindings, setxkbmap (IBus sets the key layout with it) and
+# python3-xlib (key presses for ONLYOFFICE, which drops the text of IBus).
+sudo apt-get install -y ibus ibus-gtk3 python3-gi gir1.2-ibus-1.0 x11-xkb-utils \
+    python3-xlib
 
 # The engine and its IBus component.
 sudo rm -rf "$prefix"

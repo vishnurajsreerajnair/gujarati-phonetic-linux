@@ -1,16 +1,51 @@
 # gujarati-phonetic-linux
 
-Type Gujarati by sound in Linux desktop apps (LibreOffice and other GTK apps),
-exactly as with the **Gujarati Phonetic** keyboard of ChromeOS:
-`kem Cho` gives **કેમ છો**.
+Type Gujarati by sound in the Linux apps of a Chromebook (LibreOffice,
+ONLYOFFICE and other desktop apps), exactly as with the **Gujarati Phonetic**
+keyboard of ChromeOS: `kem Cho` gives **કેમ છો**.
 
-ChromeOS's own Gujarati keyboard does not reach the Linux apps of a
-Chromebook. This package brings the same engine and the same rules to Linux,
-as an IBus input method. The engine is a Python port of Google's ChromeOS
-keyboard code (google-input-tools, Apache 2.0). It is tested to commit and
-show the same text as Google's code, key by key, on 41,792 typed sequences.
+## The problem
 
-## Install (Linux on a Chromebook, or Debian/Ubuntu)
+- **ChromeOS keyboards do not reach Linux apps.** The Gujarati keyboards of
+  ChromeOS work in Chrome and Android apps, but not in the Linux apps of a
+  Chromebook (Crostini): Google's bridge for them (cros-im) is not available
+  for the current Debian. Linux apps get plain English keys.
+- **The Linux Gujarati keyboards type differently.** Linux has phonetic
+  Gujarati keyboards (m17n, ITRANS), but their rules differ from Google's, and
+  someone used to the ChromeOS keyboard types wrong words with them.
+- **ONLYOFFICE drops the text of input methods.** Its Linux app bundles an old
+  Qt (5.9), which loses all the text that an input method sends: nothing
+  appears. This is an [open ONLYOFFICE bug](https://community.onlyoffice.com/t/keyboard-input-methods-don-t-work-on-linux-applications-of-onlyoffice/10752).
+
+This package is Google's ChromeOS Gujarati Phonetic keyboard for Linux: the
+same engine and the same rules, as an IBus input method. The engine is a Python
+port of Google's code (google-input-tools, Apache 2.0), tested to give the same
+text as Google's code, key by key, on 41,792 typed sequences.
+
+## What is installed, and why
+
+| Part | Why it is needed |
+|---|---|
+| The keyboard engine (`/usr/lib/gujarati-phonetic-linux`) | Google's rules, typed into any Linux app through IBus. |
+| IBus (`ibus`, `ibus-gtk3`, `python3-gi`, `gir1.2-ibus-1.0`) | The Linux input method framework that apps talk to. |
+| `~/.config/environment.d/ibus.conf` | Tells the Linux apps to use IBus (`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`). Replaces fcitx5 if it was set up. |
+| The systemd user service `gujarati-phonetic-ibus` | Starts IBus with this keyboard when Linux starts. |
+| One fixed IBus address (`IBUS_ADDRESS`, also in `~/.bashrc`) | ChromeOS runs several displays (X `:0`, X `:1`, Wayland), and IBus would look for a separate daemon on each one; with one address, every app finds the same keyboard. |
+| `python3-xlib` | For ONLYOFFICE only: the keyboard types the letters there as key presses (see below). |
+| `x11-xkb-utils` | `setxkbmap`, which IBus uses to set the key layout. |
+
+### ONLYOFFICE: key presses
+
+ONLYOFFICE drops the text of input methods but reads normal key presses. When
+a Qt app (IBus client `QIBusInputContext`) has the focus, the keyboard
+therefore types each Gujarati letter as a simulated key press (XTest), on a
+spare key code of the X display mapped to that letter, and corrects a letter
+with Backspace when a later key changes it (`s` gives સ, then `h` turns it
+into શ). This is a workaround for the ONLYOFFICE bug, not a fix: it stops being
+needed when ONLYOFFICE handles input methods. The X display is `:0`
+(`gujarati-phonetic-engine --x-display`).
+
+## Install
 
 In the Linux Terminal:
 
@@ -20,45 +55,82 @@ cd gujarati-phonetic-linux-main
 sh packaging/install.sh
 ```
 
-Then restart Linux: right-click the Terminal icon, **Shut down Linux**, and
-open the app again. To check the keyboard, run this in the Terminal:
+Restart Linux (right-click the Terminal icon, **Shut down Linux**), then check
+the keyboard in the Terminal:
 
 ```sh
 gujarati-phonetic-check "kem Cho"
 ```
 
-It prints `કેમ છો`.
+It prints `કેમ છો`. To remove everything: `sh packaging/uninstall.sh`.
 
-`install.sh` does the following:
+## Controls
 
-- Installs IBus with its Python bindings.
-- Copies the keyboard to `/usr/lib/gujarati-phonetic-linux`.
-- Makes IBus the input method of the Linux apps (`~/.config/environment.d/ibus.conf`). This replaces fcitx5 if it was set up.
-- Starts IBus with this keyboard when Linux starts, as the systemd user service `gujarati-phonetic-ibus`.
-- Gives the daemon one fixed address (`IBUS_ADDRESS`), for the apps and the Terminal (`~/.bashrc`). ChromeOS runs several displays, and by default IBus looks for a separate daemon on each one.
+- **ChromeOS keyboard: US.** The keyboard indicator at the bottom right of the
+  screen must say **US** while typing in Linux apps. With a ChromeOS Gujarati
+  keyboard (GU, BK) the keys are changed before Linux sees them.
+- **Ctrl+Space** or **Alt+Space**: switch between Gujarati and English. The
+  keyboard starts in Gujarati.
+- The word being typed may still change: `k` gives ક, then `a` gives કા.
+  Space, Enter, a punctuation key or an arrow key finishes it. In LibreOffice
+  it is underlined while it can change; in ONLYOFFICE it is not.
+- Shortcuts with Ctrl, Alt or Search (Ctrl+S, Ctrl+C, ...) go to the app as
+  usual.
+- **Backspace** while typing a word changes the word (`kemm` then Backspace
+  gives કેમ); otherwise it deletes as usual.
 
-To remove it, run `sh packaging/uninstall.sh`.
+## Key map
 
-## Typing
+Generated from the engine. Capital letters are typed with Shift.
 
-The keyboard starts in Gujarati. **Ctrl+Space** or **Alt+Space** switches
-between Gujarati and English.
+**Vowels** (at the start of a word) and **vowel signs** (after a consonant,
+shown with ક):
 
-The word being typed is underlined and may still change: `k` gives ક, then
-`a` gives કા. Space, a punctuation key or a click commits it.
+| Keys | Vowel | Sign | Keys | Vowel | Sign |
+|---|---|---|---|---|---|
+| `a` | અ | ક | `e` | એ | કે |
+| `aa` or `A` | આ | કા | `ai` | ઐ | કૈ |
+| `i` | ઇ | કિ | `o` | ઓ | કો |
+| `ii` or `I` | ઈ | કી | `au` | ઔ | કૌ |
+| `u` | ઉ | કુ | `R^i` | ઋ | |
+| `uu` or `U` | ઊ | કૂ | `R^I` | ૠ | |
 
-| Keys | Gujarati | Keys | Gujarati |
-|---|---|---|---|
-| `a A i I u U` | અ આ ઇ ઈ ઉ ઊ | `e ai o au` | એ ઐ ઓ ઔ |
-| `k kh g gh ~N` | ક ખ ગ ઘ ઙ | `ch Ch j jh ~n` | ચ છ જ ઝ ઞ |
-| `T Th D Dh N` | ટ ઠ ડ ઢ ણ | `t th d dh n` | ત થ દ ધ ન |
-| `p ph b bh m` | પ ફ બ ભ મ | `y r l L v` | ય ર લ ળ વ |
-| `sh Sh s h` | શ ષ સ હ | `x j~n` | ક્ષ જ્ઞ |
-| `M .n` | ં (anusvara) | `.N` | ઁ (candrabindu) |
-| `H` | ઃ (visarga) | `R^i` | ઋ |
+**Consonants**:
 
-Consonants join on their own: `kk` gives ક્ક and `vidyArthI` gives
-વિદ્યાર્થી. Long vowels can be typed doubled: `gujaraatii` gives ગુજરાતી.
+| Keys | | Keys | | Keys | | Keys | | Keys | |
+|---|---|---|---|---|---|---|---|---|---|
+| `k` | ક | `kh` | ખ | `g` | ગ | `gh` | ઘ | `~N` | ઙ |
+| `ch` | ચ | `Ch` | છ | `j` | જ | `jh` | ઝ | `~n` | ઞ |
+| `T` | ટ | `Th` | ઠ | `D` | ડ | `Dh` | ઢ | `N` | ણ |
+| `t` | ત | `th` | થ | `d` | દ | `dh` | ધ | `n` | ન |
+| `p` | પ | `ph` | ફ | `b` | બ | `bh` | ભ | `m` | મ |
+| `y` | ય | `r` | ર | `l` | લ | `L` | ળ | `v` or `w` | વ |
+| `sh` | શ | `Sh` | ષ | `s` | સ | `h` | હ | | |
+| `x` or `kSh` | ક્ષ | `j~n` or `GY` | જ્ઞ | | | | | | |
+
+**With nukta**: `q` ક઼, `Kh` ખ઼, `G` ગ઼, `z` or `J` જ઼, `.D` ડ઼, `Rh` ઢ઼,
+`f` ફ઼, `Y` ય઼, `R` ર઼.
+
+**Signs**: `M` or `.n` ં (anusvara, કં), `.N` ઁ (candrabindu, કઁ), `H` ઃ
+(visarga, કઃ), `.h` ્ (visible virama, ક્), `OM` ૐ.
+
+**Joined consonants** form on their own: `kk` ક્ક, `tr` ત્ર, `shrI` શ્રી,
+`dharma` ધર્મ, `chandra` ચન્દ્ર, `kShetra` ક્ષેત્ર, `vidyArthI` વિદ્યાર્થી.
+
+Digits and punctuation stay as typed: `0`–`9`, `.`, `,`, `?` (Google's layout
+has no Gujarati digits and no ।).
+
+## Known issues
+
+- **ૃ cannot be typed** (કૃષ્ણ, હૃદય, દૃષ્ટિ). Google's layout has rules for
+  it that can never match: `kRRi` gives ક્ર઼ર઼ઇ and `kR^i` gives ક્ઋ, in
+  Google's own engine too.
+- **ONLYOFFICE, clicking inside a word**: the keyboard does not see mouse
+  clicks. If the word being typed can still change (for example after `s`,
+  which `h` can turn into શ) and you click elsewhere, the next key may correct
+  the letter at the new place. Press Space or an arrow key before clicking.
+- **Ctrl+Space and Alt+Space** were not tested through Chrome Remote Desktop,
+  which drops modifier keys.
 
 ## How it works
 
@@ -66,18 +138,22 @@ Consonants join on their own: `kk` gives ક્ક and `vidyArthI` gives
 `scripts/google_oracle.mjs` runs them in Node and writes two files:
 
 - `src/gujarati_phonetic/data/gu_phone.json`: the layout's 210 rules, as data.
-- `tests/data/google_oracle.json.gz`: what Google's engine commits and shows after each key of 41,792 sequences. These are all the 95 keys, all pairs and triples of the phonetic keys, common words with Space and Backspace, and random typing.
+- `tests/data/google_oracle.json.gz`: what Google's engine commits and shows
+  after each key of 41,792 sequences. These are all the 95 keys, all pairs and
+  triples of the phonetic keys, common words with Space and Backspace, and
+  random typing.
 
 The Python package (`src/gujarati_phonetic/`) has these parts:
 
-| Module | Port of |
+| Module | What it does |
 |---|---|
-| `models/parsed_layout.py` | `parsedlayout.js`: the rules, matched at the end of the text |
-| `models/model.py` | `model.js`: the history that lets a later key change earlier letters |
-| `models/composer.py` | `composetextinput.js` and the key step of `controller.js`: what to commit and what to keep underlined |
-| `core/` | JavaScript regular expression behaviour and the combining marks |
-| `io/ibus_engine.py` | (new) the IBus engine |
-| `io/ibus_client.py` | (new) the installation check |
+| `models/parsed_layout.py` | Port of `parsedlayout.js`: the rules, matched at the end of the text |
+| `models/model.py` | Port of `model.js`: the history that lets a later key change earlier letters |
+| `models/composer.py` | Port of `composetextinput.js` and the key step of `controller.js`: what to commit and what can still change |
+| `core/` | JavaScript regular expression behaviour, the combining marks, the keys, and the key presses that change the text on screen |
+| `io/ibus_engine.py` | The IBus engine |
+| `io/x_typer.py` | The key presses for ONLYOFFICE (XTest) |
+| `io/ibus_client.py` | The installation check |
 
 `tests/lib/test_google_parity.py` replays every reference sequence and
 requires the same result as Google's engine at every key.
@@ -96,13 +172,15 @@ port still matches Google's engine.
 
 ```sh
 python -m venv ~/virtualenv/gujarati-phonetic
-~/virtualenv/gujarati-phonetic/bin/pip install pytest mypy ruff black
+~/virtualenv/gujarati-phonetic/bin/pip install -e '.[dev]'
 ~/virtualenv/gujarati-phonetic/bin/python -m pytest
 node scripts/google_oracle.mjs   # regenerate the layout and the reference data
 ```
 
-The package has no dependencies besides Python 3.11+. The IBus modules need
-`python3-gi` and `gir1.2-ibus-1.0` and are not imported by the tests.
+Python 3.10 or later (tested on 3.10, 3.13 and 3.14). The engine itself needs
+only the standard library; IBus needs `python3-gi` and `gir1.2-ibus-1.0`, and
+the ONLYOFFICE key presses need `python3-xlib`. The tests do not import the
+IBus modules and use a fake X display.
 
 ## License
 

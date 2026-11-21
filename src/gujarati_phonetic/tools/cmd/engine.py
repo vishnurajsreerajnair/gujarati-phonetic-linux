@@ -25,14 +25,27 @@ def main(argv: list[str] | None = None) -> None:
         ),
     )
     parser.add_argument("--ibus", action="store_true", help="accepted from ibus-daemon")
+    parser.add_argument(
+        "--engine",
+        default="gujarati-phonetic",
+        help="engine name, as in the IBus component file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--x-display",
+        default=":0",
+        help=(
+            "X display of the applications that get the text as key presses "
+            "(ONLYOFFICE); default: %(default)s"
+        ),
+    )
     parser.add_argument("--version", action="version", version=__version__)
-    parser.parse_args(argv)
+    args = parser.parse_args(argv)
     try:
         layout = ParsedLayout(read_layout(default_layout_file()))
         # IBus is only on the target system; import it after the layout check.
         from gujarati_phonetic.io import ibus_engine
 
-        ibus_engine.run(layout)
+        ibus_engine.run(layout, args.engine, args.x_display)
     except (OSError, ValueError, re.error, ImportError) as error:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(1)

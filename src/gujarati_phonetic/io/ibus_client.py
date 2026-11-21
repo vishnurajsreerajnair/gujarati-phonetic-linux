@@ -9,9 +9,6 @@ import gi
 gi.require_version("IBus", "1.0")
 from gi.repository import GLib, IBus
 
-# How long to wait for ibus-daemon to deliver the text of a key, in seconds.
-SIGNAL_WAIT = 0.2
-
 
 def type_through_ibus(engine_name: str, keys: str) -> str:
     """Type keys into a new input context and return the text it receives.
@@ -56,12 +53,12 @@ def type_through_ibus(engine_name: str, keys: str) -> str:
     if not bus.set_global_engine(engine_name):
         raise LookupError(f"IBus engine {engine_name} cannot be started")
     context.focus_in()
-    _wait_for_signals()
+    _wait_for_signals(0.2)
     for key in keys:
         # PyGObject takes the character as a string.
         keyval = IBus.KEY_space if key == " " else IBus.unicode_to_keyval(key)
         handled = context.process_key_event(keyval, 0, 0)
-        _wait_for_signals()
+        _wait_for_signals(0.2)
         if not handled:
             received.append(key)
     text = f"{''.join(received)}{composition}"
@@ -69,10 +66,15 @@ def type_through_ibus(engine_name: str, keys: str) -> str:
     return text
 
 
-def _wait_for_signals() -> None:
-    """Let the main loop deliver the signals ibus-daemon sent."""
+def _wait_for_signals(seconds: float) -> None:
+    """Let the main loop deliver the signals ibus-daemon sent.
+
+    Args:
+        seconds: How long to wait; ibus-daemon delivers the text of a key in
+            well under 0.2 s.
+    """
     main_context = GLib.MainContext.default()
-    deadline = time.monotonic() + SIGNAL_WAIT
+    deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         main_context.iteration(False)
         time.sleep(0.01)

@@ -24,14 +24,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "keys", nargs="?", default="kem Cho", help="keys to type (default: kem Cho)"
     )
+    parser.add_argument(
+        "--engine",
+        default="gujarati-phonetic",
+        help="IBus engine to type with (default: %(default)s)",
+    )
     parser.add_argument("--version", action="version", version=__version__)
     args = parser.parse_args(argv)
     try:
         # IBus is only on the target system.
         from gujarati_phonetic.io import ibus_client
-        from gujarati_phonetic.io.ibus_engine import ENGINE_NAME
 
-        text = ibus_client.type_through_ibus(ENGINE_NAME, args.keys)
+        text = ibus_client.type_through_ibus(args.engine, args.keys)
     except (ConnectionError, LookupError, ImportError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(1)

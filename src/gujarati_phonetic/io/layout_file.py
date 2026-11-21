@@ -3,22 +3,25 @@
 from __future__ import annotations
 
 import json
-from importlib.resources import files
-from importlib.resources.abc import Traversable
+from pathlib import Path
 
 from gujarati_phonetic.schema.layout import LayoutInput
 
 
-def default_layout_file() -> Traversable:
+def default_layout_file() -> Path:
     """Return the Gujarati phonetic layout shipped with the package.
+
+    The package is installed as plain files (packaging/install.sh), so the
+    data file is found next to the modules, the same on every Python version.
 
     Returns:
         The packaged data/gu_phone.json, generated from Google's gu_phone.js.
     """
-    return files("gujarati_phonetic") / "data" / "gu_phone.json"
+    package = Path(__file__).resolve().parent.parent
+    return package / "data" / "gu_phone.json"
 
 
-def read_layout(path: Traversable) -> LayoutInput:
+def read_layout(path: Path) -> LayoutInput:
     """Read a layout data file.
 
     Args:

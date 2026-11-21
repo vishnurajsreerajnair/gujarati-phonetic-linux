@@ -1,6 +1,6 @@
 [project]
 name = "gujarati-phonetic-linux"
-version = "0.1.0.dev1"
+version = "1.0.0"
 description = "Gujarati phonetic keyboard for Linux apps: Google's ChromeOS rules on IBus"
 readme = "README.md"
 license = "Apache-2.0"

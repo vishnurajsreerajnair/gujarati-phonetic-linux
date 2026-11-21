@@ -152,6 +152,11 @@ has no Gujarati digits and no ।).
   the letter at the new place. Press Space or an arrow key before clicking.
 - **Ctrl+Space and Alt+Space** were not tested through Chrome Remote Desktop,
   which drops modifier keys; the shelf app works there.
+- **ONLYOFFICE, a new spreadsheet**: in the first second or two after it opens,
+  the first cells can lose letters. Wait a moment before typing, and check the
+  first cell.
+- **Chrome Remote Desktop** drops Shift and can reorder keys typed fast by the
+  remote side; this is not the keyboard. Test by typing slowly, word by word.
 
 ## How it works
 

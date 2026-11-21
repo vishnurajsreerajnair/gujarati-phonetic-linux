@@ -12,4 +12,6 @@
 - `gujarati-phonetic-toggle` and the shelf app "ગુજરાતી / English": one click switches between Gujarati and English and shows the language in a notification.
 - One language for all apps: switching in one window switches every window, as on ChromeOS.
 - Shift, Ctrl, Alt or Caps Lock pressed alone no longer ends the word: `vidyArthI` gives વિદ્યાર્થી.
+- Fast typing in LibreOffice keeps the order of the letters (IBus sync mode).
+- The shelf app shows the language in a small window where Linux has no notification service.
 - `--engine` option of `gujarati-phonetic-engine` and `gujarati-phonetic-check`: the IBus engine name.

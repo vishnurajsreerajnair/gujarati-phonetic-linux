@@ -64,3 +64,39 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
         toggle.main(["--version"])
     assert stop.value.code == 0
     assert capsys.readouterr().out.strip() == __version__
+
+
+def test_window_without_notifications(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Without a notification service the language goes in a small window."""
+    shown: list[str] = []
+
+    def toggle_language() -> str:
+        return "english"
+
+    def notify(title: str, body: str) -> None:
+        raise ConnectionError("no notification service")
+
+    def show_message(title: str, body: str, milliseconds: int) -> None:
+        shown.append(title)
+
+    monkeypatch.setitem(
+        sys.modules,
+        "gujarati_phonetic.io.ibus_client",
+        SimpleNamespace(toggle_language=toggle_language),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "gujarati_phonetic.io.notification",
+        SimpleNamespace(notify=notify),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "gujarati_phonetic.io.message_window",
+        SimpleNamespace(show_message=show_message),
+    )
+    toggle.main([])
+    assert capsys.readouterr().out.strip() == "english"
+    assert shown == ["English"]

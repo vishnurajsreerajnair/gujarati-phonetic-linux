@@ -9,7 +9,10 @@ from gujarati_phonetic import __version__
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Switch the keyboard language, print it and show it in a notification.
+    """Switch the keyboard language, print it and show it on screen.
+
+    The language goes in a notification, or in a small window that closes by
+    itself where no notification service runs.
 
     Args:
         argv: Command line arguments, sys.argv[1:] if None.
@@ -42,6 +45,13 @@ def main(argv: list[str] | None = None) -> None:
         from gujarati_phonetic.io import notification
 
         notification.notify(summary, body)
-    except (ConnectionError, ImportError, ValueError) as error:
-        print(f"Error: {error}", file=sys.stderr)
-        sys.exit(1)
+    except (ConnectionError, ImportError, ValueError):
+        # No notification service (a Chromebook's Linux without
+        # cros-notificationd): a small window instead.
+        try:
+            from gujarati_phonetic.io import message_window
+
+            message_window.show_message(summary, body, 1500)
+        except (ConnectionError, ImportError, ValueError) as error:
+            print(f"Error: {error}", file=sys.stderr)
+            sys.exit(1)

@@ -29,11 +29,11 @@ text as Google's code, key by key, on 41,792 typed sequences.
 |---|---|
 | The keyboard engine (`/usr/lib/gujarati-phonetic-linux`) | Google's rules, typed into any Linux app through IBus. |
 | IBus (`ibus`, `ibus-gtk3`, `python3-gi`, `gir1.2-ibus-1.0`) | The Linux input method framework that apps talk to. |
-| `~/.config/environment.d/ibus.conf` | Tells the Linux apps to use IBus (`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`). Replaces fcitx5 if it was set up. |
+| `~/.config/environment.d/ibus.conf` | Tells the Linux apps to use IBus (`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`), in sync mode (`IBUS_ENABLE_SYNC_MODE=1`: LibreOffice waits for IBus at each key, so fast typing stays in order). Replaces fcitx5 if it was set up. |
 | The systemd user service `gujarati-phonetic-ibus` | Starts IBus with this keyboard when Linux starts. |
 | One fixed IBus address (`IBUS_ADDRESS`, also in `~/.bashrc`) | ChromeOS runs several displays (X `:0`, X `:1`, Wayland), and IBus would look for a separate daemon on each one; with one address, every app finds the same keyboard. |
 | `python3-xlib` | For ONLYOFFICE only: the keyboard types the letters there as key presses (see below). |
-| The app **ગુજરાતી / English** (`gujarati-phonetic-toggle`) | A button for the shelf: one click switches between Gujarati and English and shows the language in a notification. |
+| The app **ગુજરાતી / English** (`gujarati-phonetic-toggle`) | A button for the shelf: one click switches between Gujarati and English and shows the language in a notification, or in a small window that closes by itself where Linux has no notification service (`gir1.2-gtk-3.0`). |
 | `x11-xkb-utils` | `setxkbmap`, which IBus uses to set the key layout. |
 
 ### ONLYOFFICE: key presses
@@ -149,10 +149,6 @@ has no Gujarati digits and no ।).
   the letter at the new place. Press Space or an arrow key before clicking.
 - **Ctrl+Space and Alt+Space** were not tested through Chrome Remote Desktop,
   which drops modifier keys; the shelf app works there.
-- **LibreOffice, keys faster than any typing**: keys sent all at once by a
-  program (tens of keys in a few milliseconds) can come out of order in
-  LibreOffice, which handles the IBus text itself; typing at 30 keys a second
-  is right.
 
 ## How it works
 
@@ -178,6 +174,7 @@ The Python package (`src/gujarati_phonetic/`) has these parts:
 | `io/x_typer.py` | The key presses for ONLYOFFICE (XTest) |
 | `io/ibus_client.py` | The installation check and the switch of the shelf app |
 | `io/notification.py` | The notification of the shelf app |
+| `io/message_window.py` | The small window of the shelf app, without a notification service |
 
 `tests/lib/test_google_parity.py` replays every reference sequence and
 requires the same result as Google's engine at every key.

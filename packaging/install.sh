@@ -13,10 +13,11 @@ socket="/run/user/$(id -u)/ibus-gujarati-phonetic"
 address="unix:path=$socket"
 marker="# gujarati-phonetic-linux"
 
-# IBus, its Python bindings, setxkbmap (IBus sets the key layout with it) and
-# python3-xlib (key presses for ONLYOFFICE, which drops the text of IBus).
+# IBus, its Python bindings, setxkbmap (IBus sets the key layout with it),
+# python3-xlib (key presses for ONLYOFFICE, which drops the text of IBus) and
+# GTK (the language window of the shelf app).
 sudo apt-get install -y ibus ibus-gtk3 python3-gi gir1.2-ibus-1.0 x11-xkb-utils \
-    python3-xlib
+    python3-xlib gir1.2-gtk-3.0
 
 # The engine and its IBus component.
 sudo rm -rf "$prefix"
@@ -37,6 +38,8 @@ sudo install -D -m 644 "$here/packaging/gujarati-phonetic.svg" \
     /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
 
 # Linux apps talk to IBus at the fixed address (and no longer to fcitx5).
+# Sync mode: a GTK app (LibreOffice) waits for IBus at each key, so that the
+# keys of fast typing reach the document in order.
 mkdir -p "$HOME/.config/environment.d"
 rm -f "$HOME/.config/environment.d/fcitx5.conf"
 cat > "$HOME/.config/environment.d/ibus.conf" <<CONF
@@ -45,6 +48,7 @@ QT_IM_MODULE=ibus
 XMODIFIERS=@im=ibus
 SDL_IM_MODULE=ibus
 IBUS_ADDRESS=$address
+IBUS_ENABLE_SYNC_MODE=1
 CONF
 
 # The Terminal too, for gujarati-phonetic-check.

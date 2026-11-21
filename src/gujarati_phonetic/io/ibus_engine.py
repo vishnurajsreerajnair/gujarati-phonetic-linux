@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING
 import gi
 
 gi.require_version("IBus", "1.0")
-from gi.repository import Gio, IBus
+from gi.repository import Gio, GLib, IBus
 
 from gujarati_phonetic.core.keys import KeyAction, classify_key
-from gujarati_phonetic.core.screen import screen_edit
+from gujarati_phonetic.core.screen import needs_key_presses, screen_edit
 from gujarati_phonetic.models.composer import BACKSPACE, Composer, KeyResult
 from gujarati_phonetic.models.parsed_layout import ParsedLayout
+from gujarati_phonetic.models.switch import LanguageSwitch
 
 if TYPE_CHECKING:
     from gujarati_phonetic.io.x_typer import XTyper
@@ -27,6 +28,7 @@ class GujaratiPhoneticEngine(IBus.Engine):
         object_path: The D-Bus object path of the instance.
         connection: The connection to ibus-daemon.
         layout: The parsed layout.
+        switch: The language, shared by all instances.
         typer: The key presses for the clients that drop IBus text, shared by
             all instances; None without python3-xlib.
     """
@@ -39,6 +41,7 @@ class GujaratiPhoneticEngine(IBus.Engine):
         object_path: str,
         connection: Gio.DBusConnection,
         layout: ParsedLayout,
+        switch: LanguageSwitch,
         typer: XTyper | None,
     ) -> None:
         # has_focus_id: IBus tells the client name on focus (focus-in-id).
@@ -49,12 +52,14 @@ class GujaratiPhoneticEngine(IBus.Engine):
             has_focus_id=True,
         )
         self.composer = Composer(layout)
+        self.switch = switch
         self.typer = typer
-        self.gujarati = True
         # Key presses mode: the composition is typed in the document, as
         # `shown`, instead of being sent to the client.
         self.key_presses = False
         self.shown = ""
+        # Whether a timer will send the waiting key presses.
+        self.sending = False
 
     def do_process_key_event(self, keyval: int, keycode: int, state: int) -> bool:
         """Handle a key press.
@@ -72,7 +77,11 @@ class GujaratiPhoneticEngine(IBus.Engine):
         own_key = (
             self.key_presses and self.typer is not None and self.typer.owns(keycode + 8)
         )
-        if not own_key and not state & IBus.ModifierType.RELEASE_MASK:
+        released = bool(state & IBus.ModifierType.RELEASE_MASK)
+        if own_key and not released and self.typer is not None:
+            # The application has read this press.
+            self.typer.read(keycode + 8)
+        if not own_key and not released:
             # PyGObject gives the character as a string ("" or "\x00" if none).
             code = IBus.keyval_to_unicode(keyval)
             char = "" if code == "\x00" else code
@@ -85,46 +94,76 @@ class GujaratiPhoneticEngine(IBus.Engine):
                 | IBus.ModifierType.HYPER_MASK
                 | IBus.ModifierType.MOD4_MASK
             )
+            modifiers = (
+                IBus.KEY_Shift_L,
+                IBus.KEY_Shift_R,
+                IBus.KEY_Control_L,
+                IBus.KEY_Control_R,
+                IBus.KEY_Alt_L,
+                IBus.KEY_Alt_R,
+                IBus.KEY_Caps_Lock,
+                IBus.KEY_Super_L,
+                IBus.KEY_Super_R,
+                IBus.KEY_Meta_L,
+                IBus.KEY_Meta_R,
+                IBus.KEY_Hyper_L,
+                IBus.KEY_Hyper_R,
+                IBus.KEY_ISO_Level3_Shift,
+            )
             action = classify_key(
                 char,
                 is_space,
                 keyval == IBus.KEY_BackSpace,
+                keyval in modifiers,
                 bool(state & IBus.ModifierType.CONTROL_MASK),
                 bool(state & IBus.ModifierType.MOD1_MASK),
                 bool(state & meta),
             )
             match action:
                 case KeyAction.TOGGLE:
-                    self._finish_word()
-                    self.gujarati = not self.gujarati
+                    self.finish_word()
+                    self.switch.flip()
                     handled = True
-                case _ if not self.gujarati:
+                case _ if not self.switch.gujarati:
                     handled = False
                 case KeyAction.TYPE:
                     key = " " if is_space else char
                     handled = self._show(self.composer.type_key(key))
                 case KeyAction.BACKSPACE:
                     handled = self._show(self.composer.type_key(BACKSPACE))
-                case KeyAction.PASS:
-                    self._finish_word()
+                case KeyAction.MODIFIER:
                     handled = False
+                case KeyAction.PASS:
+                    self.finish_word()
+                    handled = False
+            # In key presses mode a key for the application must not overtake
+            # the presses still on their way: it goes after them.
+            shortcut = (
+                IBus.ModifierType.CONTROL_MASK | IBus.ModifierType.MOD1_MASK | meta
+            )
+            typer = self.typer if self.key_presses else None
+            if (
+                typer is not None
+                and not handled
+                and not state & shortcut
+                and action not in (KeyAction.MODIFIER, KeyAction.TOGGLE)
+                and typer.busy()
+            ):
+                typer.type_key(keyval, keycode + 8, char)
+                handled = True
+                if not self.sending:
+                    self._send()
         return handled
 
     def do_focus_in_id(self, object_path: str, client: str) -> None:
         """Choose how to give the text to the client that gets the focus.
-
-        Qt 5 names its IBus client "QIBusInputContext". ONLYOFFICE bundles Qt
-        5.9, which drops the text of input methods, so the keyboard types
-        there with key presses.
 
         Args:
             object_path: The input context (unused).
             client: The client name.
         """
         self.key_presses = (
-            client == "QIBusInputContext"
-            and self.typer is not None
-            and self.typer.ready()
+            needs_key_presses(client) and self.typer is not None and self.typer.ready()
         )
         self.shown = ""
 
@@ -157,7 +196,7 @@ class GujaratiPhoneticEngine(IBus.Engine):
 
     def do_disable(self) -> None:
         """Finish the word when the keyboard is switched off."""
-        self._finish_word()
+        self.finish_word()
 
     def _show(self, result: KeyResult) -> bool:
         """Give the client the committed text and the composition.
@@ -174,12 +213,11 @@ class GujaratiPhoneticEngine(IBus.Engine):
         if self.key_presses and self.typer is not None:
             text = f"{result.commit}{result.composition}"
             backspaces, chars = screen_edit(self.shown, text)
-            try:
-                self.typer.type_text(backspaces, chars)
-            except ConnectionError:
-                # The display is gone: IBus text from the next key on.
-                self.key_presses = False
+            self.typer.type_text(backspaces, chars)
             self.shown = result.composition
+            # A timer already set sends these keys after the earlier ones.
+            if not self.sending:
+                self._send()
         else:
             if result.commit:
                 self.commit_text(IBus.Text.new_from_string(result.commit))
@@ -198,7 +236,28 @@ class GujaratiPhoneticEngine(IBus.Engine):
             )
         return result.handled
 
-    def _finish_word(self) -> None:
+    def _send(self) -> bool:
+        """Press the waiting keys, and set a timer for those that must wait.
+
+        Returns:
+            False, for GLib: a timer that calls this method runs once.
+        """
+        self.sending = False
+        # The keys typed before a focus change still go: as real keys would,
+        # they reach the window that has the focus (a spreadsheet's next cell).
+        if self.typer is not None:
+            try:
+                delay = self.typer.send()
+            except ConnectionError:
+                # The display is gone: IBus text from the next key on.
+                self.key_presses = False
+                delay = None
+            if delay is not None:
+                self.sending = True
+                GLib.timeout_add(delay, self._send)
+        return False
+
+    def finish_word(self) -> None:
         """Commit the composition and forget the history."""
         text = self.composer.reset()
         if self.key_presses:
@@ -243,9 +302,13 @@ def run(layout: ParsedLayout, engine_name: str, x_display: str) -> None:
         typer = None
     connection = bus.get_connection()
     factory = IBus.Factory.new(connection)
-    # The instances, kept alive here, and the numbers of their object paths.
+    # The live instances, kept alive here, and the numbers of their object paths.
     engines: list[GujaratiPhoneticEngine] = []
     numbers = count(1)
+    switch = LanguageSwitch()
+
+    def forget_engine(engine: GujaratiPhoneticEngine) -> None:
+        engines.remove(engine)
 
     # IBus asks for an instance per input context; created here rather than by
     # add_engine, to set has_focus_id.
@@ -261,12 +324,49 @@ def run(layout: ParsedLayout, engine_name: str, x_display: str) -> None:
                 object_path,
                 connection,
                 layout,
+                switch,
                 typer,
             )
             engines.append(engine)
+            # IBus destroys the instance when its input context closes.
+            engine.connect("destroy", forget_engine)
         return engine
 
     factory.connect("create-engine", create_engine)
+
+    # The shelf toggle (gujarati-phonetic-toggle) switches the language with
+    # the Toggle method, that returns the language now on.
+    introspection = """<node>
+      <interface name="org.freedesktop.IBus.GujaratiPhonetic.Language">
+        <method name="Toggle">
+          <arg type="s" name="language" direction="out"/>
+        </method>
+      </interface>
+    </node>"""
+    node = Gio.DBusNodeInfo.new_for_xml(introspection)
+
+    def toggle(
+        _connection: Gio.DBusConnection,
+        _sender: str,
+        _object_path: str,
+        _interface_name: str,
+        _method_name: str,
+        _parameters: GLib.Variant,
+        invocation: Gio.DBusMethodInvocation,
+    ) -> None:
+        for engine in engines:
+            engine.finish_word()
+        gujarati = switch.flip()
+        language = "gujarati" if gujarati else "english"
+        invocation.return_value(GLib.Variant("(s)", (language,)))
+
+    connection.register_object(
+        "/org/freedesktop/IBus/GujaratiPhonetic",
+        node.interfaces[0],
+        toggle,
+        None,
+        None,
+    )
     # The bus name of the IBus component file (packaging/gujarati-phonetic.xml).
     bus.request_name("org.freedesktop.IBus.GujaratiPhonetic", 0)
     IBus.main()

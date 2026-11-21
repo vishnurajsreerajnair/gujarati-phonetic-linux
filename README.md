@@ -13,9 +13,10 @@ keyboard of ChromeOS: `kem Cho` gives **કેમ છો**.
 - **The Linux Gujarati keyboards type differently.** Linux has phonetic
   Gujarati keyboards (m17n, ITRANS), but their rules differ from Google's, and
   someone used to the ChromeOS keyboard types wrong words with them.
-- **ONLYOFFICE drops the text of input methods.** Its Linux app bundles an old
-  Qt (5.9), which loses all the text that an input method sends: nothing
-  appears. This is an [open ONLYOFFICE bug](https://community.onlyoffice.com/t/keyboard-input-methods-don-t-work-on-linux-applications-of-onlyoffice/10752).
+- **ONLYOFFICE drops the text of input methods.** Its documents and
+  spreadsheets are a Chromium view (CEF) that shows the underlined word being
+  typed but loses the text an input method commits: nothing stays. This is an
+  [open ONLYOFFICE bug](https://community.onlyoffice.com/t/keyboard-input-methods-don-t-work-on-linux-applications-of-onlyoffice/10752).
 
 This package is Google's ChromeOS Gujarati Phonetic keyboard for Linux: the
 same engine and the same rules, as an IBus input method. The engine is a Python
@@ -28,24 +29,38 @@ text as Google's code, key by key, on 41,792 typed sequences.
 |---|---|
 | The keyboard engine (`/usr/lib/gujarati-phonetic-linux`) | Google's rules, typed into any Linux app through IBus. |
 | IBus (`ibus`, `ibus-gtk3`, `python3-gi`, `gir1.2-ibus-1.0`) | The Linux input method framework that apps talk to. |
-| `~/.config/environment.d/ibus.conf` | Tells the Linux apps to use IBus (`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`). Replaces fcitx5 if it was set up. |
+| `~/.config/environment.d/ibus.conf` | Tells the Linux apps to use IBus (`GTK_IM_MODULE`, `QT_IM_MODULE`, `XMODIFIERS`), in sync mode (`IBUS_ENABLE_SYNC_MODE=1`: LibreOffice waits for IBus at each key, so fast typing stays in order). Replaces fcitx5 if it was set up. |
 | The systemd user service `gujarati-phonetic-ibus` | Starts IBus with this keyboard when Linux starts. |
 | One fixed IBus address (`IBUS_ADDRESS`, also in `~/.bashrc`) | ChromeOS runs several displays (X `:0`, X `:1`, Wayland), and IBus would look for a separate daemon on each one; with one address, every app finds the same keyboard. |
 | `python3-xlib` | For ONLYOFFICE only: the keyboard types the letters there as key presses (see below). |
+| The app **ગુજરાતી / English** (`gujarati-phonetic-toggle`) | A button for the shelf: one click switches between Gujarati and English and shows the language in a notification, or in a small window that closes by itself where Linux has no notification service (`gir1.2-gtk-3.0`). |
 | `x11-xkb-utils` | `setxkbmap`, which IBus uses to set the key layout. |
 
 ### ONLYOFFICE: key presses
 
 ONLYOFFICE drops the text of input methods but reads normal key presses. When
-a Qt app (IBus client `QIBusInputContext`) has the focus, the keyboard
-therefore types each Gujarati letter as a simulated key press (XTest), on a
-spare key code of the X display mapped to that letter, and corrects a letter
-with Backspace when a later key changes it (`s` gives સ, then `h` turns it
-into શ). This is a workaround for the ONLYOFFICE bug, not a fix: it stops being
-needed when ONLYOFFICE handles input methods. The X display is `:0`
+an ONLYOFFICE document or spreadsheet has the focus (IBus client
+`gtk3-im:DesktopEditors`, any toolkit before the `:`), the keyboard therefore
+types each Gujarati letter as a simulated key press (XTest), on a spare key
+code of the X display mapped to that letter, and corrects a letter with
+Backspace when a later key changes it (`s` gives સ, then `h` turns it into શ).
+
+Fast typing needs care. ONLYOFFICE reads a key press with its own copy of the
+key map, updated a moment after a change: a letter pressed right after its key
+code got a new letter would be lost. A key code gets a new letter only when
+ONLYOFFICE has read every earlier press (they come back through IBus, at most
+0.5 s), and is pressed 80 ms later; letters already on a key code go at once.
+Keys for ONLYOFFICE itself (Space, Enter, Tab, punctuation) wait for the
+letters typed before them.
+
+This is a workaround for the ONLYOFFICE bug, not a fix: it stops being needed
+when ONLYOFFICE handles input methods. The X display is `:0`
 (`gujarati-phonetic-engine --x-display`).
 
 ## Install
+
+A guide for users, in Gujarati: [docs/guide-gu.md](docs/guide-gu.md) (the installer
+puts it as a PDF in Linux files).
 
 In the Linux Terminal:
 
@@ -69,8 +84,14 @@ It prints `કેમ છો`. To remove everything: `sh packaging/uninstall.sh`.
 - **ChromeOS keyboard: US.** The keyboard indicator at the bottom right of the
   screen must say **US** while typing in Linux apps. With a ChromeOS Gujarati
   keyboard (GU, BK) the keys are changed before Linux sees them.
-- **Ctrl+Space** or **Alt+Space**: switch between Gujarati and English. The
-  keyboard starts in Gujarati.
+- **ગુજરાતી / English** on the shelf, or **Ctrl+Space** / **Alt+Space**:
+  switch between Gujarati and English. The shelf app shows the language now on
+  in a notification. The keyboard starts in Gujarati, and the language is the
+  same in every window, as on ChromeOS. To put the app on the shelf: open the
+  launcher, find **ગુજરાતી / English** among the Linux apps, right-click it,
+  **Pin to shelf**.
+- The language box of LibreOffice and ONLYOFFICE (bottom of the window) is the
+  spelling language of the text, not the keyboard: it does not switch it.
 - The word being typed may still change: `k` gives ક, then `a` gives કા.
   Space, Enter, a punctuation key or an arrow key finishes it. In LibreOffice
   it is underlined while it can change; in ONLYOFFICE it is not.
@@ -130,7 +151,12 @@ has no Gujarati digits and no ।).
   which `h` can turn into શ) and you click elsewhere, the next key may correct
   the letter at the new place. Press Space or an arrow key before clicking.
 - **Ctrl+Space and Alt+Space** were not tested through Chrome Remote Desktop,
-  which drops modifier keys.
+  which drops modifier keys; the shelf app works there.
+- **ONLYOFFICE, a new spreadsheet**: in the first second or two after it opens,
+  the first cells can lose letters. Wait a moment before typing, and check the
+  first cell.
+- **Chrome Remote Desktop** drops Shift and can reorder keys typed fast by the
+  remote side; this is not the keyboard. Test by typing slowly, word by word.
 
 ## How it works
 
@@ -151,9 +177,12 @@ The Python package (`src/gujarati_phonetic/`) has these parts:
 | `models/model.py` | Port of `model.js`: the history that lets a later key change earlier letters |
 | `models/composer.py` | Port of `composetextinput.js` and the key step of `controller.js`: what to commit and what can still change |
 | `core/` | JavaScript regular expression behaviour, the combining marks, the keys, and the key presses that change the text on screen |
-| `io/ibus_engine.py` | The IBus engine |
+| `models/switch.py` | The language, Gujarati or English, shared by every window |
+| `io/ibus_engine.py` | The IBus engine, and the Toggle method of the shelf app |
 | `io/x_typer.py` | The key presses for ONLYOFFICE (XTest) |
-| `io/ibus_client.py` | The installation check |
+| `io/ibus_client.py` | The installation check and the switch of the shelf app |
+| `io/notification.py` | The notification of the shelf app |
+| `io/message_window.py` | The small window of the shelf app, without a notification service |
 
 `tests/lib/test_google_parity.py` replays every reference sequence and
 requires the same result as Google's engine at every key.

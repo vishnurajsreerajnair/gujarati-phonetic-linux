@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ગુજરાતી / English
+Comment=Switch the keyboard of the Linux apps between Gujarati and English
+Exec=/usr/lib/gujarati-phonetic-linux/gujarati-phonetic-toggle
+Icon=gujarati-phonetic
+Terminal=false
+Categories=Utility;

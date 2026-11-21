@@ -8,6 +8,24 @@ Backspace presses and the new characters.
 from __future__ import annotations
 
 
+def needs_key_presses(client: str) -> bool:
+    """Tell whether an IBus client drops the text of input methods.
+
+    ONLYOFFICE's documents are a Chromium view (CEF) that IBus knows as
+    "gtk3-im:DesktopEditors"; it shows the underlined composition but drops
+    the committed text. The toolkit part before ":" is not checked, so that a
+    new toolkit in an ONLYOFFICE update keeps the key presses.
+
+    Args:
+        client: The client name IBus gives on focus.
+
+    Returns:
+        Whether the client gets the text as key presses.
+    """
+    _, _, program = client.rpartition(":")
+    return program == "DesktopEditors"
+
+
 def screen_edit(shown: str, text: str) -> tuple[int, str]:
     """Find the key presses that turn the text on screen into new text.
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from Xlib import XK, X, error
 from Xlib.ext import xtest
@@ -47,6 +49,9 @@ class FakeDisplay:
             keysym = X.NoSymbol if spare else XK.XK_a + keycode
             self.keymap[keycode] = keysym
         self.text = ""
+        # Key codes of the presses the application has not read yet (see
+        # send_all).
+        self.unread: list[int] = []
         self.mapping_changes = 0
         self.closed = False
         self.xtest = True
@@ -74,6 +79,7 @@ class FakeDisplay:
 
     def press(self, keycode: int) -> None:
         """Read a key press into the text, with the current key map."""
+        self.unread.append(keycode)
         keysym = self.keymap[keycode]
         if keysym == XK.XK_BackSpace:
             self.text = self.text[:-1]
@@ -95,6 +101,28 @@ class FakeDisplay:
     def close(self) -> None:
         """Close the display."""
         self.closed = True
+
+
+def send_all(typer: XTyper, display: FakeDisplay) -> int:
+    """Send the waiting keys as the engine does, the application reading each.
+
+    Args:
+        typer: The typer, with keys waiting.
+        display: Its fake display.
+
+    Returns:
+        The number of calls of send().
+    """
+    calls = 0
+    delay: int | None = 0
+    while delay is not None:
+        delay = typer.send()
+        calls += 1
+        # The presses come back through IBus.
+        for keycode in display.unread:
+            typer.read(keycode)
+        display.unread.clear()
+    return calls
 
 
 @pytest.fixture
@@ -124,6 +152,7 @@ def test_ready_takes_the_spare_key_codes(fake_display: list[FakeDisplay]) -> Non
     assert len(fake_display) == 1
     assert fake_display[0].name == ":0"
     assert typer.spare == frozenset({13, 14, 15})
+    assert typer.keycodes == {XK.XK_BackSpace: 13}
     assert typer.owns(13)
     assert not typer.owns(8)
     assert not typer.owns(9)
@@ -135,6 +164,7 @@ def test_types_text_and_backspace(fake_display: list[FakeDisplay]) -> None:
     assert typer.ready()
     typer.type_text(0, "કેમ")
     typer.type_text(1, "મ્")
+    send_all(typer, fake_display[0])
     assert fake_display[0].text == "કેમ્"
 
 
@@ -146,6 +176,7 @@ def test_reuses_key_codes_for_many_characters(
     assert typer.ready()
     text = "ગુજરાતી નમસ્તે"
     typer.type_text(0, text)
+    send_all(typer, fake_display[0])
     assert fake_display[0].text == text
 
 
@@ -153,11 +184,13 @@ def test_remaps_when_the_key_map_was_reset(fake_display: list[FakeDisplay]) -> N
     """A key map reset by the system is fixed before the next press."""
     typer = XTyper(":0")
     assert typer.ready()
-    typer.type_text(0, "ક")
     display = fake_display[0]
+    typer.type_text(0, "ક")
+    send_all(typer, display)
     for keycode in typer.spare:
         display.keymap[keycode] = X.NoSymbol
     typer.type_text(0, "ક")
+    send_all(typer, display)
     assert display.text == "કક"
 
 
@@ -190,8 +223,9 @@ def test_display_that_cannot_open(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(x_typer, "Display", refuse)
     typer = XTyper(":9")
     assert not typer.ready()
+    typer.type_text(0, "ક")
     with pytest.raises(ConnectionError):
-        typer.type_text(0, "ક")
+        typer.send()
 
 
 def test_close_unmaps_the_spare_key_codes(fake_display: list[FakeDisplay]) -> None:
@@ -199,6 +233,7 @@ def test_close_unmaps_the_spare_key_codes(fake_display: list[FakeDisplay]) -> No
     typer = XTyper(":0")
     assert typer.ready()
     typer.type_text(0, "કા")
+    send_all(typer, fake_display[0])
     typer.close()
     display = fake_display[0]
     assert display.closed
@@ -244,7 +279,109 @@ def test_engine_key_presses_on_the_display(
         text = f"{result.commit}{result.composition}"
         backspaces, chars = screen_edit(shown, text)
         typer.type_text(backspaces, chars)
+        send_all(typer, display)
         shown = result.composition
         by_text = f"{by_text}{result.commit}"
         composition = result.composition
     assert display.text == f"{by_text}{composition}"
+
+
+def test_new_character_waits_for_the_earlier_presses(
+    fake_display: list[FakeDisplay],
+) -> None:
+    """A key code gets a new character only when the earlier presses are read."""
+    typer = XTyper(":0")
+    assert typer.ready()
+    display = fake_display[0]
+    typer.type_text(0, "કે")
+    # ક needs a key code: mapped, pressed 80 ms later.
+    assert typer.send() == 80
+    assert display.text == ""
+    # ક goes; ે waits for the application to read it.
+    assert typer.send() == 20
+    assert display.text == "ક"
+    changes = display.mapping_changes
+    assert typer.send() == 20
+    assert display.mapping_changes == changes
+    typer.read(display.unread[0])
+    assert typer.send() == 80
+    assert typer.send() is None
+    assert display.text == "કે"
+
+
+def test_mapped_characters_go_at_once(fake_display: list[FakeDisplay]) -> None:
+    """Characters already on a key code go without waiting."""
+    typer = XTyper(":0")
+    assert typer.ready()
+    display = fake_display[0]
+    typer.type_text(0, "કે")
+    send_all(typer, display)
+    typer.type_text(0, "કેકે")
+    assert typer.send() is None
+    assert display.text == "કેકેકે"
+
+
+def test_unread_presses_stop_waiting_after_half_a_second(
+    fake_display: list[FakeDisplay],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the presses never come back, the next character goes after 0.5 s."""
+
+    def start() -> float:
+        return 100.0
+
+    def later() -> float:
+        return 100.6
+
+    monkeypatch.setattr(time, "monotonic", start)
+    typer = XTyper(":0")
+    assert typer.ready()
+    typer.type_text(0, "કે")
+    assert typer.send() == 80
+    assert typer.send() == 20
+    monkeypatch.setattr(time, "monotonic", later)
+    assert typer.send() == 80
+    assert typer.send() is None
+    assert fake_display[0].text == "કે"
+
+
+def test_keys_go_after_the_waiting_text(fake_display: list[FakeDisplay]) -> None:
+    """A key for the application is pressed after the characters before it."""
+    typer = XTyper(":0")
+    assert typer.ready()
+    display = fake_display[0]
+    typer.type_text(0, "ક")
+    # A printable key goes as its character, on a spare key code.
+    typer.type_key(XK.XK_question, 61, "?")
+    # A key without a character goes on its own key code (here key code 9).
+    typer.type_key(XK.XK_a + 9, 9, "\r")
+    send_all(typer, display)
+    assert display.text == f"ક?{chr(XK.XK_a + 9)}"
+    assert 61 not in display.unread
+
+
+def test_replayed_key_is_owned_until_read(fake_display: list[FakeDisplay]) -> None:
+    """A key pressed again is recognised once when it comes back."""
+    typer = XTyper(":0")
+    assert typer.ready()
+    display = fake_display[0]
+    typer.type_key(XK.XK_a + 9, 9, "")
+    assert typer.busy()
+    assert typer.send() is None
+    assert typer.owns(9)
+    assert display.unread == [9]
+    typer.read(9)
+    assert not typer.owns(9)
+    assert display.text == chr(XK.XK_a + 9)
+
+
+def test_busy_until_the_presses_are_read(fake_display: list[FakeDisplay]) -> None:
+    """The typer is busy while keys wait or presses are not read yet."""
+    typer = XTyper(":0")
+    assert typer.ready()
+    display = fake_display[0]
+    assert not typer.busy()
+    typer.type_text(0, "ક")
+    assert typer.busy()
+    send_all(typer, display)
+    assert not typer.busy()

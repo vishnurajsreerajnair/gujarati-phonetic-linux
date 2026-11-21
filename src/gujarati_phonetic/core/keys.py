@@ -14,12 +14,21 @@ class KeyAction(Enum):
     TYPE = "type"
     # Backspace while typing Gujarati.
     BACKSPACE = "backspace"
+    # A modifier key alone (Shift, Ctrl, Alt, Caps Lock, Search): the
+    # application gets it and the word goes on, so that "duniyA" is one word.
+    MODIFIER = "modifier"
     # Any other key: finish the word and let the application handle the key.
     PASS = "pass"
 
 
 def classify_key(
-    char: str, is_space: bool, is_backspace: bool, ctrl: bool, alt: bool, meta: bool
+    char: str,
+    is_space: bool,
+    is_backspace: bool,
+    is_modifier: bool,
+    ctrl: bool,
+    alt: bool,
+    meta: bool,
 ) -> KeyAction:
     """Decide what a key press does.
 
@@ -27,6 +36,8 @@ def classify_key(
         char: The character the key types on a US keyboard ("" if none).
         is_space: Whether the key is Space.
         is_backspace: Whether the key is Backspace.
+        is_modifier: Whether the key is a modifier (Shift, Ctrl, Alt, Caps
+            Lock, Super, Meta, Hyper, AltGr).
         ctrl: Whether Ctrl is held.
         alt: Whether Alt is held.
         meta: Whether Super, Meta or Hyper (the Search key) is held.
@@ -36,6 +47,8 @@ def classify_key(
         as on ChromeOS; only Ctrl+Space and Alt+Space are kept for switching.
     """
     match (is_space, is_backspace, ctrl or alt or meta):
+        case _ if is_modifier:
+            action = KeyAction.MODIFIER
         case (True, _, True) if (ctrl or alt) and not meta:
             action = KeyAction.TOGGLE
         case (_, _, True):

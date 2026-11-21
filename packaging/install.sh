@@ -13,10 +13,11 @@ socket="/run/user/$(id -u)/ibus-gujarati-phonetic"
 address="unix:path=$socket"
 marker="# gujarati-phonetic-linux"
 
-# IBus, its Python bindings, setxkbmap (IBus sets the key layout with it) and
-# python3-xlib (key presses for ONLYOFFICE, which drops the text of IBus).
+# IBus, its Python bindings, setxkbmap (IBus sets the key layout with it),
+# python3-xlib (key presses for ONLYOFFICE, which drops the text of IBus) and
+# GTK (the language window of the shelf app).
 sudo apt-get install -y ibus ibus-gtk3 python3-gi gir1.2-ibus-1.0 x11-xkb-utils \
-    python3-xlib
+    python3-xlib gir1.2-gtk-3.0
 
 # The engine and its IBus component.
 sudo rm -rf "$prefix"
@@ -24,10 +25,24 @@ sudo mkdir -p "$prefix"
 sudo cp -r "$here/src/gujarati_phonetic" "$prefix/"
 sudo install -m 755 "$here/packaging/gujarati-phonetic-engine" "$prefix/"
 sudo install -m 755 "$here/packaging/gujarati-phonetic-check" "$prefix/"
+sudo install -m 755 "$here/packaging/gujarati-phonetic-toggle" "$prefix/"
 sudo ln -sf "$prefix/gujarati-phonetic-check" /usr/local/bin/gujarati-phonetic-check
+sudo ln -sf "$prefix/gujarati-phonetic-toggle" /usr/local/bin/gujarati-phonetic-toggle
 sudo install -m 644 "$here/packaging/gujarati-phonetic.xml" /usr/share/ibus/component/
 
+# The shelf toggle: an app that switches between Gujarati and English and shows
+# the language in a notification. Pin it to the shelf from the launcher.
+sudo install -m 644 "$here/packaging/gujarati-phonetic-toggle.desktop" \
+    /usr/share/applications/
+sudo install -D -m 644 "$here/packaging/gujarati-phonetic.svg" \
+    /usr/share/icons/hicolor/scalable/apps/gujarati-phonetic.svg
+
+# The guide in Gujarati, in the home folder ("Linux files" in the Files app).
+cp "$here/docs/guide-gu.pdf" "$HOME/ગુજરાતી કીબોર્ડ - માર્ગદર્શિકા.pdf"
+
 # Linux apps talk to IBus at the fixed address (and no longer to fcitx5).
+# Sync mode: a GTK app (LibreOffice) waits for IBus at each key, so that the
+# keys of fast typing reach the document in order.
 mkdir -p "$HOME/.config/environment.d"
 rm -f "$HOME/.config/environment.d/fcitx5.conf"
 cat > "$HOME/.config/environment.d/ibus.conf" <<CONF
@@ -36,6 +51,7 @@ QT_IM_MODULE=ibus
 XMODIFIERS=@im=ibus
 SDL_IM_MODULE=ibus
 IBUS_ADDRESS=$address
+IBUS_ENABLE_SYNC_MODE=1
 CONF
 
 # The Terminal too, for gujarati-phonetic-check.
@@ -70,4 +86,5 @@ systemctl --user enable gujarati-phonetic-ibus.service
 gsettings set org.freedesktop.ibus.general preload-engines "['gujarati-phonetic']" 2>/dev/null || true
 
 echo "Installed. Restart Linux (right-click the Terminal icon, Shut down Linux),"
-echo "then open LibreOffice and type: kem Cho"
+echo "then open LibreOffice and type: kem Cho. Pin the app 'ગુજરાતી / English'"
+echo "to the shelf: it switches between Gujarati and English."
